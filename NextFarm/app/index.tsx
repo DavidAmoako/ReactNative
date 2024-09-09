@@ -4,6 +4,7 @@ import {
     Image,
     StyleSheet,
     View,
+    KeyboardAvoidingView,
     Text,
     Pressable,
     StatusBar,
@@ -23,7 +24,7 @@ export default function SignIn() {
             <View style={styles.imageContainer}>
 
             </View>
-            <View style={styles.mainInfo}>
+            <KeyboardAvoidingView behavior="padding" style={styles.mainInfo}>
                 <Text style={styles.mainTitle}>{`Welcome Back 👋
 You’ve Been Missed!`}
                 </Text>
@@ -33,8 +34,10 @@ You’ve Been Missed!`}
                         style={styles.input}
                         onChangeText={onChangeUsername}
                         value={userName}
-                        placeholder="email"
+                        placeholder="email@example.com"
                         keyboardType="email-address"
+                        autoCapitalize="none"
+                        autoCorrect={false}
                     />
                 </View>
                 <View style={styles.password}>
@@ -45,6 +48,10 @@ You’ve Been Missed!`}
                         value={userPass}
                         placeholder="password"
                         keyboardType="default"
+                        secureTextEntry={true}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+
                     />
                 </View>
                 <ThemedText type="link" style={{ textDecorationLine: "underline", marginBottom: 60 }}>
@@ -56,7 +63,7 @@ You’ve Been Missed!`}
                     </Pressable>
                 </View>
 
-            </View>
+            </KeyboardAvoidingView>
             <View style={styles.signUp}>
                 <ThemedText style={styles.text2}>Don't have an account?
                     <ThemedText type="link" style={{ textDecorationLine: "underline" }}>
