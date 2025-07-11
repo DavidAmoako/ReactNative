@@ -1,291 +1,350 @@
+// Import necessary React Native components and hooks
 import {
-    StyleSheet,
-    Text,
-    StatusBar,
-    View,
-    useWindowDimensions,
-    Pressable,
-    TextInput
+    StyleSheet,    // For creating component styles
+    Text,          // For displaying text
+    StatusBar,     // For controlling the status bar appearance
+    View,          // Basic container component
+    useWindowDimensions, // Hook to get device screen dimensions
+    Pressable,     // For creating touchable buttons
+    TextInput      // For text input with cursor positioning
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import { useState } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context' // Provides safe area handling
+import { useState } from 'react'; // React hook for state management
 import React from 'react'
 
+// Main calculator component
 export default function index() {
 
-    const width = useWindowDimensions().width - 100;
-    const height = width / 4;
-    const radius = height / 2;
-    const zero = height * 2 + 20;
+    // === LAYOUT CALCULATIONS ===
+    // Get device width and calculate button dimensions based on screen size
+    const width = useWindowDimensions().width - 100; // Total width minus padding
+    const height = width / 4;                        // Button height (1/4 of width)
+    const radius = height / 2;                       // Border radius for circular buttons
+    const zero = height * 2 + 20;                   // Width for the "0" button (double width)
     
-    // Calculate dynamic font size based on input length
-    const baseFontSize = 60;
-    const minFontSize = baseFontSize * 0.5; // 50% of original size
-    const maxDisplayWidth = width - 40; // Account for padding
-    const averageCharWidth = baseFontSize * 0.6; // Approximate character width
-    const maxCharsAtBaseSize = Math.floor(maxDisplayWidth / averageCharWidth);
+    // === DYNAMIC FONT SIZING ===
+    // Calculate font size that scales down as numbers get longer
+    const baseFontSize = 60;                         // Default font size for display
+    const minFontSize = baseFontSize * 0.5;          // Minimum font size (50% of base)
+    const maxDisplayWidth = width - 40;              // Available display width (minus padding)
+    const averageCharWidth = baseFontSize * 0.6;     // Approximate width per character
+    const maxCharsAtBaseSize = Math.floor(maxDisplayWidth / averageCharWidth); // Max chars at full size
     
+    // Function to calculate appropriate font size based on text length
     const calculateFontSize = (text: string) => {
         if (text.length <= maxCharsAtBaseSize) {
-            return baseFontSize;
+            return baseFontSize; // Use full size if text fits
         }
+        // Scale down proportionally if text is too long
         const scaleFactor = maxCharsAtBaseSize / text.length;
         return Math.max(minFontSize, baseFontSize * scaleFactor);
     };
     
+    // Function to check if we can add more characters without making font too small
     const canAddMoreChars = (currentText: string) => {
         return calculateFontSize(currentText + "0") >= minFontSize;
     };
 
-    const [line1, setLine1] = useState('0'); // current input
-    const [line2, setLine2] = useState('');  // previous input + operator
-    const [operator, setOperator] = useState<string | null>(null);
-    const [waitingForOperand, setWaitingForOperand] = useState(false);
-    const [cursorPosition, setCursorPosition] = useState(1); // cursor position in line1
+    // === STATE MANAGEMENT ===
+    // All calculator state variables using React hooks
+    const [line1, setLine1] = useState('0');                    // Current number being entered/displayed
+    const [line2, setLine2] = useState('');                     // Previous number + operator (for display)
+    const [operator, setOperator] = useState<string | null>(null); // Current math operation (+, -, ×, ÷)
+    const [waitingForOperand, setWaitingForOperand] = useState(false); // Flag: waiting for next number input
+    const [cursorPosition, setCursorPosition] = useState(1);     // Cursor position within the input
 
+    // === CALCULATOR FUNCTIONS ===
+    
+    // Clear all calculator data and reset to initial state
     const clearScreen = () => {
-        setLine1('0');
-        setLine2('');
-        setOperator(null);
-        setWaitingForOperand(false);
-        setCursorPosition(1);
+        setLine1('0');                    // Reset display to "0"
+        setLine2('');                     // Clear previous operation display
+        setOperator(null);                // Clear current operator
+        setWaitingForOperand(false);      // Reset operation state
+        setCursorPosition(1);             // Reset cursor to position after "0"
     };
 
+    // Handle number input (0-9)
     const inputNumber = (num: string) => {
         if (waitingForOperand) {
-            setLine1(num);
-            setWaitingForOperand(false);
-            setCursorPosition(1);
+            // Start new number after an operator was pressed
+            setLine1(num);                    // Replace display with new number
+            setWaitingForOperand(false);      // No longer waiting for operand
+            setCursorPosition(1);             // Set cursor after the new digit
         } else {
+            // Insert digit at current cursor position
             const newValue = line1 === '0' ? num : line1.slice(0, cursorPosition) + num + line1.slice(cursorPosition);
-            // Check if adding this character would make the font too small
+            // Only add the digit if it won't make the font too small
             if (canAddMoreChars(line1)) {
-                setLine1(newValue);
-                setCursorPosition(cursorPosition + 1);
+                setLine1(newValue);               // Update display with new digit
+                setCursorPosition(cursorPosition + 1); // Move cursor forward
             }
         }
     };
 
+    // Handle decimal point input
     const inputDot = () => {
         if (waitingForOperand) {
-            setLine1('0.');
-            setWaitingForOperand(false);
-            setCursorPosition(2);
+            // Start new decimal number after operator
+            setLine1('0.');                   // Start with "0."
+            setWaitingForOperand(false);      // No longer waiting for operand
+            setCursorPosition(2);             // Position cursor after "0."
         } else if (!line1.includes('.') && canAddMoreChars(line1)) {
+            // Add decimal point if none exists and font won't be too small
             const newValue = line1.slice(0, cursorPosition) + '.' + line1.slice(cursorPosition);
-            setLine1(newValue);
-            setCursorPosition(cursorPosition + 1);
+            setLine1(newValue);               // Insert decimal at cursor position
+            setCursorPosition(cursorPosition + 1); // Move cursor forward
         }
     };
 
+    // Handle percentage calculation
     const inputPercent = () => {
-        const value = parseFloat(line1) / 100;
-        setLine1(value.toString());
+        const value = parseFloat(line1) / 100;  // Convert current number to percentage
+        setLine1(value.toString());             // Display the result
     };
 
+    // Handle backspace/delete functionality
     const deleteLastChar = () => {
-        if (cursorPosition > 0) {
+        if (cursorPosition > 0) {              // Only delete if cursor is not at beginning
             if (line1.length > 1) {
+                // Remove character before cursor position
                 const newValue = line1.slice(0, cursorPosition - 1) + line1.slice(cursorPosition);
-                setLine1(newValue);
-                setCursorPosition(Math.max(0, cursorPosition - 1));
+                setLine1(newValue);                    // Update display
+                setCursorPosition(Math.max(0, cursorPosition - 1)); // Move cursor back
             } else {
-                setLine1('0');
-                setCursorPosition(1);
+                // If only one character left, reset to "0"
+                setLine1('0');                         // Reset to initial state
+                setCursorPosition(1);                  // Position cursor after "0"
             }
         }
     };
 
+    // Legacy function for operations (kept for compatibility)
     const doOperation = (nextOperator: string) => {
         if (operator && !waitingForOperand) {
+            // Complete pending operation if one exists
             const result = compute(parseFloat(line2), parseFloat(line1), operator);
-            setLine2(result.toString());
-            setLine1(result.toString());
+            setLine2(result.toString());          // Store result for next operation
+            setLine1(result.toString());          // Display result
         } else {
-            setLine2(line1);
+            // No pending operation, just store current number
+            setLine2(line1);                      // Store current number for operation
         }
-        setOperator(nextOperator);
-        setWaitingForOperand(true);
+        setOperator(nextOperator);                // Set the new operator
+        setWaitingForOperand(true);               // Wait for next number input
     };
 
+    // Perform mathematical calculations
     const compute = (first: number, second: number, op: string) => {
         switch (op) {
-            case '+': return first + second;
-            case '−': return first - second;
-            case '×': return first * second;
-            case '÷': return second === 0 ? 0 : first / second;
-            default: return second;
+            case '+': return first + second;      // Addition
+            case '−': return first - second;      // Subtraction  
+            case '×': return first * second;      // Multiplication
+            case '÷': return second === 0 ? 0 : first / second; // Division (avoid divide by zero)
+            default: return second;               // Return second number if no valid operator
         }
     };
 
+    // Handle operator button presses (+, -, ×, ÷)
     const handleOperator = (op: string) => {
         if (operator && !waitingForOperand) {
+            // If there's a pending operation, complete it first
             const result = compute(parseFloat(line2), parseFloat(line1), operator);
-            setLine2(result.toString());
-            setLine1(result.toString());
+            setLine2(result.toString());          // Store result as first operand for next operation
+            setLine1(result.toString());          // Display the result
         } else {
-            setLine2(line1);
+            // No pending operation, store current number as first operand
+            setLine2(line1);                      // Store current display value
         }
-        setOperator(op);
-        setWaitingForOperand(true);
+        setOperator(op);                          // Set the selected operator
+        setWaitingForOperand(true);               // Flag that we're waiting for the next number
     };
 
+    // Handle equals button press - complete the calculation
     const handleEqual = () => {
-        if (operator) {
+        if (operator) {                           // Only calculate if there's an operation pending
             const result = compute(parseFloat(line2), parseFloat(line1), operator);
-            setLine1(result.toString());
-            setLine2('');
-            setOperator(null);
-            setWaitingForOperand(true);
-            setCursorPosition(result.toString().length);
+            setLine1(result.toString());          // Display the final result
+            setLine2('');                         // Clear the operation display
+            setOperator(null);                    // Clear the operator
+            setWaitingForOperand(true);           // Ready for next operation
+            setCursorPosition(result.toString().length); // Position cursor at end of result
         }
     };
 
+    // === RENDER CALCULATOR UI ===
     return (
         <SafeAreaView style={styles.container}>
+            {/* Configure status bar appearance */}
             <StatusBar
-                animated={true}
-                backgroundColor="#000"
-                barStyle={"light-content"}
-                showHideTransition={"fade"}
-                hidden={false}
+                animated={true}                   // Enable animations
+                backgroundColor="#000"            // Black background
+                barStyle={"light-content"}        // Light text/icons
+                showHideTransition={"fade"}       // Fade transition
+                hidden={false}                    // Show status bar
             />
+            
+            {/* Calculator display area */}
             <View style={styles.display}>
-                <Text style={styles.dispText1}>{line2 && operator ? `${line2} ${operator}` : ''}</Text>
+                {/* Top line: shows previous number and operator */}
+                <Text style={styles.dispText1}>
+                    {line2 && operator ? `${line2} ${operator}` : ''}
+                </Text>
+                
+                {/* Main display: current number with cursor support */}
                 <TextInput
-                    style={[styles.dispText, { fontSize: calculateFontSize(line1) }]}
-                    value={line1}
-                    selection={{ start: cursorPosition, end: cursorPosition }}
-                    onSelectionChange={(event) => setCursorPosition(event.nativeEvent.selection.start)}
-                    showSoftInputOnFocus={false}
-                    multiline={false}
-                    editable={true}
+                    style={[styles.dispText, { fontSize: calculateFontSize(line1) }]} // Dynamic font size
+                    value={line1}                                    // Current number
+                    selection={{ start: cursorPosition, end: cursorPosition }}        // Cursor position
+                    onSelectionChange={(event) => setCursorPosition(event.nativeEvent.selection.start)} // Update cursor
+                    showSoftInputOnFocus={false}                     // Don't show keyboard
+                    multiline={false}                                // Single line only
+                    editable={true}                                  // Allow cursor positioning
                 />
             </View>
 
+            {/* === CALCULATOR BUTTON ROWS === */}
+            
+            {/* First row: AC, %, ⌫, ÷ */}
             <View style={styles.keys}>
+                {/* All Clear button */}
                 <Pressable
-                    onPress={clearScreen}
+                    onPress={clearScreen}         // Reset calculator
                     style={[styles.keyAsh, { height: height, width: height, borderRadius: radius }]}
                 >
                     <Text style={styles.padText1}>AC</Text>
                 </Pressable>
+                
+                {/* Percentage button */}
                 <Pressable
-                    onPress={inputPercent}
+                    onPress={inputPercent}        // Convert to percentage
                     style={[styles.keyAsh, { height: height, width: height, borderRadius: radius }]}
                 >
                     <Text style={styles.padText1}>%</Text>
                 </Pressable>
+                
+                {/* Delete/Backspace button */}
                 <Pressable
-                    onPress={deleteLastChar}
+                    onPress={deleteLastChar}      // Remove character at cursor
                     style={[styles.keyAsh, { height: height, width: height, borderRadius: radius }]}
                 >
                     <Text style={styles.padText1}>⌫</Text>
                 </Pressable>
+                
+                {/* Division button */}
                 <Pressable
-                    onPress={() => handleOperator('÷')}
+                    onPress={() => handleOperator('÷')} // Set division operator
                     style={[styles.keyYellow, { height: height, width: height, borderRadius: radius }]}
                 >
                     <Text style={styles.padText}>÷</Text>
                 </Pressable>
             </View>
 
+            {/* Second row: 7, 8, 9, × */}
             <View style={styles.keys}>
                 <Pressable
-                    onPress={() => inputNumber('7')}
+                    onPress={() => inputNumber('7')} // Input digit 7
                     style={[styles.keyGrey, { height: height, width: height, borderRadius: radius }]}
                 >
                     <Text style={styles.padText}>7</Text>
                 </Pressable>
                 <Pressable
-                    onPress={() => inputNumber('8')}
+                    onPress={() => inputNumber('8')} // Input digit 8
                     style={[styles.keyGrey, { height: height, width: height, borderRadius: radius }]}
                 >
                     <Text style={styles.padText}>8</Text>
                 </Pressable>
                 <Pressable
-                    onPress={() => inputNumber('9')}
+                    onPress={() => inputNumber('9')} // Input digit 9
                     style={[styles.keyGrey, { height: height, width: height, borderRadius: radius }]}
                 >
                     <Text style={styles.padText}>9</Text>
                 </Pressable>
                 <Pressable
-                    onPress={() => handleOperator('×')}
+                    onPress={() => handleOperator('×')} // Set multiplication operator
                     style={[styles.keyYellow, { height: height, width: height, borderRadius: radius }]}
                 >
                     <Text style={styles.padText}>×</Text>
                 </Pressable>
             </View>
 
+            {/* Third row: 4, 5, 6, − */}
             <View style={styles.keys}>
                 <Pressable
-                    onPress={() => inputNumber('4')}
+                    onPress={() => inputNumber('4')} // Input digit 4
                     style={[styles.keyGrey, { height: height, width: height, borderRadius: radius }]}
                 >
                     <Text style={styles.padText}>4</Text>
                 </Pressable>
                 <Pressable
-                    onPress={() => inputNumber('5')}
+                    onPress={() => inputNumber('5')} // Input digit 5
                     style={[styles.keyGrey, { height: height, width: height, borderRadius: radius }]}
                 >
                     <Text style={styles.padText}>5</Text>
                 </Pressable>
                 <Pressable
-                    onPress={() => inputNumber('6')}
+                    onPress={() => inputNumber('6')} // Input digit 6
                     style={[styles.keyGrey, { height: height, width: height, borderRadius: radius }]}
                 >
                     <Text style={styles.padText}>6</Text>
                 </Pressable>
                 <Pressable
-                    onPress={() => handleOperator('−')}
+                    onPress={() => handleOperator('−')} // Set subtraction operator
                     style={[styles.keyYellow, { height: height, width: height, borderRadius: radius }]}
                 >
                     <Text style={styles.padText}>−</Text>
                 </Pressable>
             </View>
 
+            {/* Fourth row: 1, 2, 3, + */}
             <View style={styles.keys}>
                 <Pressable
-                    onPress={() => inputNumber('1')}
+                    onPress={() => inputNumber('1')} // Input digit 1
                     style={[styles.keyGrey, { height: height, width: height, borderRadius: radius }]}
                 >
                     <Text style={styles.padText}>1</Text>
                 </Pressable>
                 <Pressable
-                    onPress={() => inputNumber('2')}
+                    onPress={() => inputNumber('2')} // Input digit 2
                     style={[styles.keyGrey, { height: height, width: height, borderRadius: radius }]}
                 >
                     <Text style={styles.padText}>2</Text>
                 </Pressable>
                 <Pressable
-                    onPress={() => inputNumber('3')}
+                    onPress={() => inputNumber('3')} // Input digit 3
                     style={[styles.keyGrey, { height: height, width: height, borderRadius: radius }]}
                 >
                     <Text style={styles.padText}>3</Text>
                 </Pressable>
                 <Pressable
-                    onPress={() => handleOperator('+')}
+                    onPress={() => handleOperator('+')} // Set addition operator
                     style={[styles.keyYellow, { height: height, width: height, borderRadius: radius }]}
                 >
                     <Text style={styles.padText}>+</Text>
                 </Pressable>
             </View>
 
+            {/* Fifth row: 0 (double width), ., = */}
             <View style={styles.keys}>
+                {/* Zero button (spans two columns) */}
                 <Pressable
-                    onPress={() => inputNumber('0')}
+                    onPress={() => inputNumber('0')} // Input digit 0
                     style={[styles.keyGrey1, { height: height, width: zero, borderRadius: radius }]}
                 >
                     <Text style={styles.padText}>0</Text>
                 </Pressable>
+                
+                {/* Decimal point button */}
                 <Pressable
-                    onPress={inputDot}
+                    onPress={inputDot}            // Add decimal point
                     style={[styles.keyGrey, { height: height, width: height, borderRadius: radius }]}
                 >
                     <Text style={styles.padText}>.</Text>
                 </Pressable>
+                
+                {/* Equals button */}
                 <Pressable
-                    onPress={handleEqual}
+                    onPress={handleEqual}         // Calculate final result
                     style={[styles.keyYellow, { height: height, width: height, borderRadius: radius }]}
                 >
                     <Text style={styles.padText}>=</Text>
@@ -295,71 +354,93 @@ export default function index() {
     )
 }
 
+// === STYLESHEET DEFINITIONS ===
 const styles = StyleSheet.create({
+    // Main container - fills entire screen with black background
     container: {
-        flex: 1,
-        backgroundColor: "#000",
+        flex: 1,                    // Take up full available space
+        backgroundColor: "#000",    // Black background
     },
+    
+    // Text styling for number buttons (white text)
     padText: {
-        color: "#fff",
-        fontSize: 35
+        color: "#fff",             // White text color
+        fontSize: 35               // Large font size for buttons
     },
+    
+    // Text styling for function buttons (black text)
     padText1: {
-        color: "#000",
-        fontSize: 35
+        color: "#000",             // Black text color
+        fontSize: 35               // Large font size for buttons
     },
+    
+    // Main display text styling
     dispText: {
-        color: "#fff",
-        fontSize: 60
+        color: "#fff",             // White text color
+        fontSize: 60               // Large font (will be dynamically adjusted)
     },
+    
+    // Secondary display text styling (for operation display)
     dispText1: {
-        color: "#fff",
-        fontSize: 30
+        color: "#fff",             // White text color
+        fontSize: 30               // Medium font size
     },
+    
+    // Display area container
     display: {
-        flex: 1,
-        justifyContent: "flex-end",
-        alignItems: "flex-end",
-        marginBottom: 40,
-        paddingHorizontal: 20
+        flex: 1,                   // Take remaining space above buttons
+        justifyContent: "flex-end", // Align content to bottom
+        alignItems: "flex-end",     // Align content to right
+        marginBottom: 40,          // Space between display and buttons
+        paddingHorizontal: 20      // Horizontal padding
     },
+    
+    // Button row container
     keys: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        paddingHorizontal: 20,
-        justifyContent: "space-between",
-        marginBottom: 20
+        flexDirection: "row",       // Arrange buttons horizontally
+        flexWrap: "wrap",          // Allow wrapping to next line
+        paddingHorizontal: 20,     // Horizontal padding
+        justifyContent: "space-between", // Even spacing between buttons
+        marginBottom: 20           // Space between button rows
     },
+    
+    // Standard number button styling (dark gray)
     keyGrey: {
-        backgroundColor: "#222",
-        margin: 5,
-        height: 50,
-        width: 50,
-        justifyContent: "center",
-        alignItems: "center"
+        backgroundColor: "#222",    // Dark gray background
+        margin: 5,                 // Margin around button
+        height: 50,                // Height (overridden by dynamic sizing)
+        width: 50,                 // Width (overridden by dynamic sizing)
+        justifyContent: "center",   // Center content vertically
+        alignItems: "center"       // Center content horizontally
     },
+    
+    // Zero button styling (double width, left-aligned text)
     keyGrey1: {
-        backgroundColor: "#222",
-        margin: 5,
-        height: 50,
-        width: 50,
-        justifyContent: "center",
-        paddingLeft: 30
+        backgroundColor: "#222",    // Dark gray background
+        margin: 5,                 // Margin around button
+        height: 50,                // Height (overridden by dynamic sizing)
+        width: 50,                 // Width (overridden by dynamic sizing)
+        justifyContent: "center",   // Center content vertically
+        paddingLeft: 30            // Left padding to align "0" properly
     },
+    
+    // Function button styling (medium gray)
     keyAsh: {
-        backgroundColor: "#555",
-        margin: 5,
-        height: 50,
-        width: 50,
-        justifyContent: "center",
-        alignItems: "center"
+        backgroundColor: "#555",    // Medium gray background
+        margin: 5,                 // Margin around button
+        height: 50,                // Height (overridden by dynamic sizing)
+        width: 50,                 // Width (overridden by dynamic sizing)
+        justifyContent: "center",   // Center content vertically
+        alignItems: "center"       // Center content horizontally
     },
+    
+    // Operator button styling (yellow/orange)
     keyYellow: {
-        backgroundColor: "#F4CE14",
-        margin: 5,
-        height: 50,
-        width: 50,
-        justifyContent: "center",
-        alignItems: "center"
+        backgroundColor: "#F4CE14", // Yellow/orange background
+        margin: 5,                 // Margin around button
+        height: 50,                // Height (overridden by dynamic sizing)
+        width: 50,                 // Width (overridden by dynamic sizing)
+        justifyContent: "center",   // Center content vertically
+        alignItems: "center"       // Center content horizontally
     }
 })
