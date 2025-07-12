@@ -10,6 +10,13 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
+// Set the animation mode to 'native' for better performance.
+SplashScreen.setOptions({
+  duration: 400,
+  fade: true,
+});
+
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
