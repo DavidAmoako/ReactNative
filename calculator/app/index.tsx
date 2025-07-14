@@ -26,26 +26,29 @@ export default function index() {
     const zero = height * 2 + 20;                   // Width for the "0" button (double width)
     
     // === DYNAMIC FONT SIZING ===
-    // Calculate font size that scales down as numbers get longer
+    // Calculate font size that scales down when text reaches full screen width
     const baseFontSize = 60;                         // Default font size for display
     const minFontSize = baseFontSize * 0.5;          // Minimum font size (50% of base)
     const maxDisplayWidth = width - 40;              // Available display width (minus padding)
-    const averageCharWidth = baseFontSize * 0.6;     // Approximate width per character
-    const maxCharsAtBaseSize = Math.floor(maxDisplayWidth / averageCharWidth); // Max chars at full size
-    
+    const averageCharWidth = baseFontSize * 0.55;    // More accurate character width estimation
+
     // Function to calculate appropriate font size based on text length
     const calculateFontSize = (text: string) => {
-        if (text.length <= maxCharsAtBaseSize) {
-            return baseFontSize; // Use full size if text fits
+        const textWidth = text.length * averageCharWidth; // Estimated text width
+        
+        if (textWidth <= maxDisplayWidth) {
+            return baseFontSize; // Use full size if text fits within screen width
         }
-        // Scale down proportionally if text is too long
-        const scaleFactor = maxCharsAtBaseSize / text.length;
-        return Math.max(minFontSize, baseFontSize * scaleFactor);
+        
+        // Scale down proportionally when text exceeds screen width
+        const scaleFactor = maxDisplayWidth / textWidth;
+        return Math.max(minFontSize, baseFontSize * scaleFactor); // Don't go below 50% of original size
     };
-    
-    // Function to check if we can add more characters without making font too small
+
+    // Function to check if we can add more characters (removed the font size restriction)
     const canAddMoreChars = (currentText: string) => {
-        return calculateFontSize(currentText + "0") >= minFontSize;
+        // Allow unlimited characters now that we have proper scaling
+        return true;
     };
 
     // === STATE MANAGEMENT ===
@@ -123,7 +126,7 @@ export default function index() {
         setCursorPosition(1);             // Reset cursor to position after "0"
     };
 
-    // Handle number input (0-9)
+    // Handle number input (0-9) - removed font size checking limitation
     const inputNumber = (num: string) => {
         if (waitingForOperand) {
             // Start new number after an operator was pressed
@@ -131,25 +134,22 @@ export default function index() {
             setWaitingForOperand(false);      // No longer waiting for operand
             setCursorPosition(1);             // Set cursor after the new digit
         } else {
-            // Insert digit at current cursor position
+            // Insert digit at current cursor position without character limit
             const newValue = line1 === '0' ? num : line1.slice(0, cursorPosition) + num + line1.slice(cursorPosition);
-            // Only add the digit if it won't make the font too small
-            if (canAddMoreChars(line1)) {
-                setLine1(newValue);               // Update display with new digit
-                setCursorPosition(cursorPosition + 1); // Move cursor forward
-            }
+            setLine1(newValue);               // Update display with new digit
+            setCursorPosition(cursorPosition + 1); // Move cursor forward
         }
     };
 
-    // Handle decimal point input
+    // Handle decimal point input - removed font size checking limitation
     const inputDot = () => {
         if (waitingForOperand) {
             // Start new decimal number after operator
             setLine1('0.');                   // Start with "0."
             setWaitingForOperand(false);      // No longer waiting for operand
             setCursorPosition(2);             // Position cursor after "0."
-        } else if (!line1.includes('.') && canAddMoreChars(line1)) {
-            // Add decimal point if none exists and font won't be too small
+        } else if (!line1.includes('.')) {
+            // Add decimal point if none exists (removed font size check)
             const newValue = line1.slice(0, cursorPosition) + '.' + line1.slice(cursorPosition);
             setLine1(newValue);               // Insert decimal at cursor position
             setCursorPosition(cursorPosition + 1); // Move cursor forward
@@ -238,6 +238,23 @@ export default function index() {
         }
     };
 
+    // === NEW FUNCTION: Return history calculation to main display ===
+    // When a history item is tapped, extract the result and display it on the main screen
+    const returnHistoryToDisplay = (historyItem: string) => {
+        // Parse the history item to extract the result after the "=" sign
+        // Example: "5 + 3 = 8" -> extract "8"
+        const equalIndex = historyItem.lastIndexOf('=');
+        if (equalIndex !== -1) {
+            const result = historyItem.substring(equalIndex + 1).trim(); // Get text after "=" and remove spaces
+            setLine1(result);                           // Set the result as current display value
+            setLine2('');                               // Clear the operation display
+            setOperator(null);                          // Clear any pending operator
+            setWaitingForOperand(true);                 // Ready for next operation
+            setCursorPosition(result.length);           // Position cursor at end of result
+            setIsHistoryVisible(false);                 // Close the history drawer
+        }
+    };
+
     // === RENDER CALCULATOR UI ===
     return (
         <SafeAreaView style={styles.container}>
@@ -288,7 +305,7 @@ export default function index() {
                     onPress={clearScreen}         // Reset calculator
                     style={[styles.keyAsh, { height: height, width: height, borderRadius: radius }]}
                 >
-                    <Text style={styles.padText1}>AC</Text>
+                    <Text style={[{color: "red"},styles.padText1]}>AC</Text>
                 </Pressable>
                 
                 {/* Percentage button */}
@@ -479,11 +496,15 @@ export default function index() {
                                 data={history}
                                 keyExtractor={(item, index) => index.toString()}
                                 renderItem={({ item }) => (
-                                    <View style={styles.historyItem}>
+                                    <Pressable 
+                                        style={styles.historyItem}
+                                        onPress={() => returnHistoryToDisplay(item)} // NEW: Tap to return calculation to display
+                                    >
                                         <Text style={styles.historyItemText}>{item}</Text>
-                                    </View>
+                                    </Pressable>
                                 )}
                                 style={styles.historyList}
+                                showsVerticalScrollIndicator={false} // Hide scroll indicator for cleaner look
                             />
                         )}
                     </Pressable>
@@ -504,13 +525,15 @@ const styles = StyleSheet.create({
     // Text styling for number buttons (white text)
     padText: {
         color: "#fff",             // White text color
-        fontSize: 35               // Large font size for buttons
+        fontSize: 35,
+        fontWeight: 'bold',               // Large font size for buttons
     },
     
     // Text styling for function buttons (black text)
     padText1: {
         color: "#000",             // Black text color
-        fontSize: 35               // Large font size for buttons
+        fontSize: 35,
+        fontWeight: 'bold',               // Large font size for buttons
     },
     
     // Main display text styling
@@ -594,10 +617,7 @@ const styles = StyleSheet.create({
         width: 40,                 // Fixed width for circular button
         height: 40,                // Fixed height for circular button
         justifyContent: 'center',  // Center icon vertically
-        alignItems: 'center',      // Center icon horizontally
-        backgroundColor: '#333',   // Dark gray background
-        borderRadius: 20,          // Circular shape (half of width/height)
-        zIndex: 1,                 // Ensure button appears above other elements
+        alignItems: 'center'      // Center icon horizontally
     },
 
     // Text styling for history button icon (clipboard emoji)
@@ -667,53 +687,53 @@ const styles = StyleSheet.create({
         height: 30,                // Fixed height for circular button
         borderRadius: 15,          // Circular shape (half of width/height)
         justifyContent: 'center',  // Center X icon vertically
-        alignItems: 'center',      // Center X icon horizontally
+        alignItems: 'center'       // Center X icon horizontally
     },
 
     // Text styling for close button (X icon)
     closeButtonText: {
-        color: '#fff',             // White color for visibility
-        fontSize: 16,              // Medium font size for X icon
-        fontWeight: 'bold',        // Bold for better visibility
+        color: '#fff',             // White text color for visibility
+        fontSize: 16,              // Medium font size for the X icon
+        fontWeight: 'bold',        // Bold text for better visibility
     },
 
-    // === HISTORY CONTENT STYLES ===
-    // Styles for the content area of history drawer
-
-    // Empty state container - shown when no calculations exist
+    // Empty history state styling
     emptyHistory: {
-        flex: 1,                   // Take up available space in drawer
-        justifyContent: 'center',  // Center message vertically
-        alignItems: 'center',      // Center message horizontally
-        paddingVertical: 40,       // Vertical padding for spacing
+        flex: 1,                   // Fill available space
+        justifyContent: 'center',  // Center content vertically
+        alignItems: 'center',      // Center content horizontally
+        padding: 20,               // Padding around content
     },
 
-    // Text styling for empty state message
+    // Text styling for empty history message
     emptyHistoryText: {
-        color: '#666',             // Muted gray color for secondary text
+        color: '#aaa',             // Light gray color for placeholder text
         fontSize: 16,              // Medium font size
-        fontStyle: 'italic',       // Italic style to indicate placeholder text
+        textAlign: 'center',       // Centered text alignment
     },
 
-    // Container for the scrollable history list
+    // History list styling
     historyList: {
-        flex: 1,                   // Take up available space in drawer
-        paddingHorizontal: 20,     // Horizontal padding for list items
+        maxHeight: '70%',          // Limit height to 70% of drawer height
+        paddingHorizontal: 10,     // Horizontal padding for list items
+        paddingTop: 10,            // Top padding for first item
     },
 
-    // Individual history item container (each calculation entry)
+    // Individual history item styling
     historyItem: {
         paddingVertical: 12,       // Vertical padding inside each item
         paddingHorizontal: 16,     // Horizontal padding inside each item
         marginVertical: 2,         // Small vertical margin between items
         backgroundColor: '#333',   // Dark gray background for each item
         borderRadius: 8,           // Rounded corners for modern look
+        // NEW: Add visual feedback for pressable items
+        borderWidth: 1,            // Thin border
+        borderColor: '#444',       // Slightly lighter border color
     },
 
-    // Text styling for individual history calculations
+    // Text styling for history items
     historyItemText: {
-        color: '#fff',             // White text for readability
-        fontSize: 14,              // Small-medium font size
-        fontFamily: 'monospace',   // Monospace font for aligned numbers
+        color: '#fff',             // White text color
+        fontSize: 16,              // Medium font size
     },
-})
+});
