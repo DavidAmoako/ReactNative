@@ -305,7 +305,7 @@ export default function index() {
                     onPress={clearScreen}         // Reset calculator
                     style={[styles.keyAsh, { height: height, width: height, borderRadius: radius }]}
                 >
-                    <Text style={[{color: "red"},styles.padText1]}>AC</Text>
+                    <Text style={styles.padTextAC}>AC</Text>
                 </Pressable>
                 
                 {/* Percentage button */}
@@ -526,14 +526,21 @@ const styles = StyleSheet.create({
     padText: {
         color: "#fff",             // White text color
         fontSize: 35,
-        fontWeight: 'bold',               // Large font size for buttons
+        fontWeight: 'semibold',               // Large font size for buttons
     },
     
     // Text styling for function buttons (black text)
     padText1: {
         color: "#000",             // Black text color
         fontSize: 35,
-        fontWeight: 'bold',               // Large font size for buttons
+        fontWeight: 'semibold',               // Large font size for buttons
+    },
+
+    // Text styling for function buttons (red text)
+    padTextAC: {
+        color: "red",             // Red text color
+        fontSize: 35,
+        fontWeight: 'semibold',               // Large font size for buttons
     },
     
     // Main display text styling
