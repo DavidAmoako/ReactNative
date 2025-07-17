@@ -1,0 +1,435 @@
+"use client"
+
+import { useAdminMonitoring } from "@/hooks/use-admin-monitoring"
+import { ConnectionStatus } from "@/components/connection-status"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Input } from "@/components/ui/input"
+import { useState } from "react"
+import {
+  Users,
+  Calendar,
+  Activity,
+  Search,
+  Filter,
+  Bell,
+  Settings,
+  LogOut,
+  AlertTriangle,
+  Shield,
+  Eye,
+  MessageSquare,
+  UserX,
+  RefreshCw,
+  Send,
+} from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+
+export default function AdminDashboard() {
+  const [activeTab, setActiveTab] = useState("overview")
+  const [searchQuery, setSearchQuery] = useState("")
+
+  const { users, platformStats, realtimeStats, alerts, isConnected, loading, actions } = useAdminMonitoring()
+
+  const filteredUsers = users.filter(
+    (user) =>
+      user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase()),
+  )
+
+  const formatTimeAgo = (date: Date) => {
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const minutes = Math.floor(diff / 60000)
+    const hours = Math.floor(diff / 3600000)
+
+    if (minutes < 60) return `${minutes}m ago`
+    if (hours < 24) return `${hours}h ago`
+    return date.toLocaleDateString()
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+          <p className="text-gray-600">Connecting to main application...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Admin Header */}
+      <header className="bg-white border-b shadow-sm">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <div className="h-10 w-10 bg-gradient-to-r from-red-600 to-red-700 rounded-lg flex items-center justify-center">
+                <Shield className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <span className="text-xl font-bold">TheHandyMan</span>
+                <Badge variant="destructive" className="ml-2">
+                  Admin Control Panel
+                </Badge>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 px-3 py-1 bg-green-50 rounded-full">
+              <div
+                className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500 animate-pulse" : "bg-red-500"}`}
+              ></div>
+              <span className={`text-sm ${isConnected ? "text-green-700" : "text-red-700"}`}>
+                {isConnected ? "Connected to Main App" : "Disconnected"}
+              </span>
+            </div>
+
+            <Button variant="ghost" size="icon" className="relative">
+              <Bell className="h-5 w-5" />
+              <Badge
+                variant="destructive"
+                className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+              >
+                {alerts.filter((a) => a.status === "active").length}
+              </Badge>
+            </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src="/placeholder.svg?height=32&width=32" alt="Admin" />
+                    <AvatarFallback className="bg-red-100 text-red-700">AD</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">System Administrator</p>
+                    <p className="text-xs leading-none text-muted-foreground">admin@thehandyman.com</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Admin Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Activity className="mr-2 h-4 w-4" />
+                  <span>System Logs</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Secure Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </header>
+
+      <div className="container mx-auto px-4 py-8">
+        {/* Connection Status */}
+        <div className="mb-6">
+          <ConnectionStatus />
+        </div>
+
+        {/* Critical Alerts */}
+        {alerts.filter((a) => a.severity === "critical" && a.status === "active").length > 0 && (
+          <Card className="mb-8 border-red-200 bg-red-50">
+            <CardHeader className="pb-3">
+              <div className="flex items-center space-x-2">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+                <CardTitle className="text-red-800">Critical System Alerts</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {alerts
+                  .filter((a) => a.severity === "critical" && a.status === "active")
+                  .map((alert) => (
+                    <div
+                      key={alert.id}
+                      className="flex items-center justify-between p-3 bg-white rounded border-l-4 border-red-500"
+                    >
+                      <div>
+                        <p className="font-medium text-red-800">{alert.title}</p>
+                        <p className="text-sm text-red-600">{alert.description}</p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs text-red-500">{formatTimeAgo(alert.timestamp)}</span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-red-300 text-red-700 bg-transparent"
+                          onClick={() => actions.resolveAlert(alert.id)}
+                        >
+                          Resolve
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Welcome Section */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Control Center</h1>
+          <p className="text-gray-600">Monitor and manage the TheHandyMan platform in real-time</p>
+        </div>
+
+        {/* Real-time Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card className="relative overflow-hidden">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Active Users</p>
+                  <p className="text-2xl font-bold">{realtimeStats.activeUsers.toLocaleString()}</p>
+                  <p className="text-sm text-green-600">+{platformStats?.growthRate.users}%</p>
+                  <p className="text-xs text-gray-500 mt-1">Live from main app</p>
+                </div>
+                <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Users className="h-6 w-6 text-blue-600" />
+                </div>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-purple-500"></div>
+            </CardContent>
+          </Card>
+
+          <Card className="relative overflow-hidden">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Active Workers</p>
+                  <p className="text-2xl font-bold">{realtimeStats.activeWorkers}</p>
+                  <p className="text-sm text-green-600">+{platformStats?.growthRate.workers}%</p>
+                  <p className="text-xs text-gray-500 mt-1">Online now</p>
+                </div>
+                <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <Users className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-green-500 to-emerald-500"></div>
+            </CardContent>
+          </Card>
+
+          <Card className="relative overflow-hidden">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Pending Bookings</p>
+                  <p className="text-2xl font-bold">{realtimeStats.pendingBookings}</p>
+                  <p className="text-sm text-yellow-600">Needs attention</p>
+                  <p className="text-xs text-gray-500 mt-1">Real-time sync</p>
+                </div>
+                <div className="h-12 w-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                  <Calendar className="h-6 w-6 text-yellow-600" />
+                </div>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-yellow-500 to-orange-500"></div>
+            </CardContent>
+          </Card>
+
+          <Card className="relative overflow-hidden">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">System Load</p>
+                  <p className="text-2xl font-bold">{realtimeStats.systemLoad}%</p>
+                  <p className={`text-sm ${realtimeStats.systemLoad > 80 ? "text-red-600" : "text-green-600"}`}>
+                    {realtimeStats.systemLoad > 80 ? "High" : "Normal"}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">Main app metrics</p>
+                </div>
+                <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <Activity className="h-6 w-6 text-purple-600" />
+                </div>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-pink-500"></div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Content Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overview">Live Overview</TabsTrigger>
+            <TabsTrigger value="users">User Management</TabsTrigger>
+            <TabsTrigger value="communications">Communications</TabsTrigger>
+            <TabsTrigger value="monitoring">System Monitor</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="users" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Live User Management</CardTitle>
+                    <CardDescription>Real-time user data from the main application</CardDescription>
+                  </div>
+                  <div className="flex space-x-2">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Search users..."
+                        className="pl-10 w-64"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    </div>
+                    <Button variant="outline">
+                      <Filter className="mr-2 h-4 w-4" />
+                      Filter
+                    </Button>
+                    <Button onClick={actions.refreshData}>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Refresh
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Last Seen</TableHead>
+                      <TableHead>Bookings</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell>
+                          <div className="flex items-center space-x-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.firstName} />
+                              <AvatarFallback>
+                                {user.firstName[0]}
+                                {user.lastName[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium">
+                                {user.firstName} {user.lastName}
+                              </p>
+                              <p className="text-sm text-gray-600">{user.email}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={user.role === "worker" ? "default" : "secondary"}>{user.role}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <div
+                              className={`w-2 h-2 rounded-full ${user.isActive ? "bg-green-500" : "bg-gray-400"}`}
+                            ></div>
+                            <Badge variant={user.isActive ? "default" : "secondary"}>
+                              {user.isActive ? "Active" : "Inactive"}
+                            </Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-600">{formatTimeAgo(user.lastSeen)}</TableCell>
+                        <TableCell>
+                          <span className="font-medium">{user.completedBookings}</span>
+                          {user.rating && (
+                            <div className="flex items-center space-x-1 mt-1">
+                              <span className="text-xs text-yellow-600">★ {user.rating}</span>
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex space-x-2">
+                            <Button size="sm" variant="outline">
+                              <Eye className="mr-1 h-3 w-3" />
+                              View
+                            </Button>
+                            <Button size="sm" variant="outline">
+                              <MessageSquare className="mr-1 h-3 w-3" />
+                              Message
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 border-red-300 bg-transparent"
+                              onClick={() => actions.suspendUser(user.id, "Suspended by admin")}
+                            >
+                              <UserX className="mr-1 h-3 w-3" />
+                              Suspend
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="communications" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Platform Communications</CardTitle>
+                <CardDescription>Send messages and notifications to main app users</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <h4 className="font-medium text-blue-800 mb-2">Broadcast to Main App</h4>
+                  <p className="text-sm text-blue-600 mb-4">Send real-time messages to all users or specific groups</p>
+                  <div className="flex space-x-2">
+                    <Button
+                      onClick={() => actions.broadcastMessage("System maintenance scheduled for tonight at 2 AM EST")}
+                    >
+                      <Send className="mr-2 h-4 w-4" />
+                      Send System Announcement
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => actions.broadcastMessage("New features available!", "user")}
+                    >
+                      <MessageSquare className="mr-2 h-4 w-4" />
+                      Message Users
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => actions.broadcastMessage("Platform update completed", "worker")}
+                    >
+                      <MessageSquare className="mr-2 h-4 w-4" />
+                      Message Workers
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  )
+}
